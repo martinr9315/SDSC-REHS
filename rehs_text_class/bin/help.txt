@@ -1,0 +1,105 @@
+      _____________    ______________
+-----/ ____/ __  / /_ / / ____/_  __/
+----/ /   / / / / /|// / __/   / /
+---/ /___/ /_/ / /  / / /___  / /
+--/_____/____ /_/  /_/_____/ /_/
+
+Created by interns in the REHS program under the
+mentorship of Dr. Martin Kandes:
+ - Nicholas Clark
+ - Roxane Martin
+ - Dustin Wu
+
+===Usage Help===
+
+--Usage--: 
+python main.py [command] [-flag1] [-flag2]...
+
+--Note--: 
+Order of flags does not matter, but command must come first and if there is an associated input for the command
+it must directly succeed the command. Only one command can be run at a time, but multiple flags can be used.
+This code is intended to run in python 3.
+
+--Commands--:
+dwnl: Downloads emails from the email address specified in main.py and organizes them into directories. The 'emails' directory will contain ticket directories corresponding to each ticket downloaded. Each ticket directory contains a set of UID directories, the earliest of which is the earliest email of that ticket downloaded. In order to jump to the most recently downloaded email, a number in 'last_num.txt' updates after downloading is complete.
+If the -re flag is enabled, this feature is disabled and every email will be redownloaded. 
+
+strp [FILENAME1.txt] [FILENAME2.txt]...: Strips downloaded email body text, omitting words that occur in stopwords.txt and
+the input .txt files from the body text (stored in a file named 'body_stripped.txt'). Also removes characters like
+punctuation and digits, as well as urls and file paths. Every time this command is run the old body_stripped.txt files are
+overwritten.
+
+dict: Writes dictionary files containing the frequency of each word. A 'global' dictionary.txt will be created
+in the main directory with the total word counts of every email. A 'local' dictionary.txt will
+be created inside of each earliest UID directory containing the word counts of each stripped body.
+
+catg: Moves ticket directories into category directories using ALL of the .txt files 
+(which contain ticket ids for a specific category) in the directory named "categories". See Fig 1 
+for an example of one of these .txt files.
+
+tble: Creates a table using dictionaries of training_emails emails created by the dict command by default, and stores it in a .p (pickle) file. 
+
+clss: Automatically categorizes emails in emails directory. Running this command requires that dwnl and strp be run prior. Categorized emails
+will be transferred into the test_emails directory, where they will not serve as training data until approved by manc.
+
+manc: Prompts the user to verify if the classifications done by clss were correct. For each improperly classified emails, it will prompt the user for the proper category (this category can only come from pre-existing categories in training_emails). The email will then be transferred to its proper category in training_emails and will be considered fit for use as additional training data.
+Once this is done, the ticket ID of this categorized email will be appended to its respective category.txt file.
+
+ucat: Uncategorizes emails in both test_emails and training_emails.
+
+list [PERCENT]: Randomly selects PERCENT% of the training emails to test against the algorithm. Creates a text file called testing_list.txt which stores the emails chosen to be part of the test set, and also "blindfolds" the algorithm to these emails. If no PERCENT is given, defaults to 10%.
+
+acrc: Runs a single test on the accuracy of the currently trained model using all of the training emails EXCEPT the ones chosen by the list command.
+
+crsv [K]: Performs a K-fold cross validation to test the accuracy of the algorithm by temporarily retraining the algorithm on smaller sets of training data. Then, if the -vi flag is enabled, the command builds a confusion matrix displaying accuracy statistics.
+
+bcsv: Makes a .csv file representing the table, which can be opened and examined by a program like Excel. Then, if the -vi flag is enabled, 
+the command then uses that file to build png file pie charts displaying the top 9 most common words found in the emails of each category.
+
+smod [FILENAME.txt]: Either appends or deletes words in FILENAME.txt to/from stopwords.txt (located in bin directory), 
+depending on if the -dl flag is used (see below). Defaults to appending words.
+
+htxt: Outputs this help documentation onto the terminal.
+
+--Scikit Mode--:
+putting an 's' in front of the commands tble, clss, acrc, and crsv runs the commands above except relying on a Naive Bayes algorithm from the 
+scikit-learn library.
+
+--Flags--:
+-vb: verbose, program will print misc. info to terminal (defaults to false)
+-nl: no loadbar, this flag will disable the tqdm loading bar that appears on several commands (defualts to true).
+-re: redo, this flag impacts the behavior of multiple commands (defaults to false):
+	- with dwnl, emails will be redownloaded even if they already exist in emails, test_emails, or training_emails
+	- with strp, all emails will be re-stripped instead of just those that haven't been stripped before
+-dl: delete, when used with smod command deletes words from stopwords.txt rather than append (defaults to false)
+-vi: visual, when this is enabled, some commands will generate graphs displaying statistics of the algorithm.
+
+--Fig 1-- (catg input file example):
+The file named "category#0.txt"
+in the directory located at /main/categories/,
+with these contents:
+-------------
+    89495
+    90158
+    90400
+    90565
+    89587
+    90170
+    90403
+    90569
+-------------
+will move directories ticket#89495, ticket#90158, etc. into a newly created directory located at
+"main/emails/category#0". If a ticket id is not found in the emails directory, meaning that it
+is either in another category directory OR was never downloaded, the message "Unable to locate [PATH]"
+will be displayed.
+
+--Workflow For Classifying--:
+_____________________________________________________________
+[1] manual: dwnl => strp => catg => dict => tble
+[2] automatic: dwnl => strp => dict => clss => manc => dict => tble
+_____________________________________________________________
+To get started, run workflow [1]. Manual classifying with catg should be done first in order to adequately train the algorithm. Once this is done,
+automatic classifying can be done with clss [2], although manual user input is required with manc if you want these new
+classifications to be used as training data. To train, create category files like the ones in Fig 1 above inside of
+the categories directory (created automatically once dwnl is run), and run workflow [1]. To re-train,
+modify category files as needed and rerun dict and catg with the -re flag enabled, and rerun tble.
